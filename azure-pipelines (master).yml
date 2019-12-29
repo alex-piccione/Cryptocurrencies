@@ -9,7 +9,7 @@ variables:
   base version: "0.6"
   project file: "Alex75.Cryptocurrencies/Alex75.Cryptocurrencies.fsproj"
 
-
+jobs:
 - job: test_version
   steps: 
   - task: echo "$(MajorVersion).$(MinorVersion).$(PatchVersion)$(rev:.r)"

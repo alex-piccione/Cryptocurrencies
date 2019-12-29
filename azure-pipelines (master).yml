@@ -12,7 +12,7 @@ variables:
 jobs:
 - job: test_version
   steps: 
-  - task: echo "$(MajorVersion).$(MinorVersion).$(PatchVersion)$(rev:.r)"
+  - bash: echo "$(MajorVersion).$(MinorVersion).$(PatchVersion)$(rev:.r)"
 
 - job: Build
   steps:

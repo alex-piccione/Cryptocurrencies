@@ -1,19 +1,57 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
 - master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  #vmImage: 'ubuntu-latest' # does not have dot net core 3.1
+  vmImage: "windows-latest"
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+  base version: "0.6"
+  project file: "Alex75.Cryptocurrencies/Alex75.Cryptocurrencies.fsproj"
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+
+- job: test_version
+  steps: 
+  - task: echo "$(MajorVersion).$(MinorVersion).$(PatchVersion)$(rev:.r)"
+
+- job: Build
+  steps:
+  - task: DotNetCoreCLI@2
+    inputs: 
+      command: build
+      projects: "$(project file)"
+      arguments: --configuration Release
+
+- job: Test
+  dependsOn: Build
+  steps:
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: test
+      projects: "**/Tests.*proj"
+      arguments: >
+        --configuration Release
+        --filter "TestCategory!=NOT_ON_DEPLOY&TestCategory!=REQUIRE_API_KEY"
+
+- job: Package
+  dependsOn: Test
+  variables:
+  - name: version
+    value: '$(base version).$(Build.BuildNumber)'
+  steps:
+    - task: DotNetCoreCLI@2
+      displayName: "Create package (dotnet pack)"
+      inputs:
+        command: pack
+        packagesToPack: "$(project file)"
+        versioningScheme: byEnvVar
+        versionEnvVar: "version"
+
+    - bash: echo Created package version "$(version)"
+    
+    - task: NuGetCommand@2
+      inputs:
+        command: 'push'
+        packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+        nuGetFeedType: 'external'
+        publishFeedCredentials: 'Nuget Alex75'
